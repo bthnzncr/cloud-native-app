@@ -1,0 +1,264 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest
+        ports:
+          - containerPort: 27017
+        env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            value: admin
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            value: "123123123"
+          - name: MONGO_INITDB_DATABASE
+            value: news_aggregator
+        volumeMounts:
+          - mountPath: /data/db
+            name: mongodb-storage
+        readinessProbe:
+          exec:
+            command: ["mongosh", "--eval", "db.adminCommand('ping')", "-u", "admin", "-p", "123123123", "--authenticationDatabase", "admin"]
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 5
+        livenessProbe:
+          exec:
+            command: ["mongosh", "--eval", "db.adminCommand('ping')", "-u", "admin", "-p", "123123123", "--authenticationDatabase", "admin"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          periodSeconds: 20
+          failureThreshold: 5
+      volumes:
+        - name: mongodb-storage
+          persistentVolumeClaim:
+            claimName: mongodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+      nodePort: 30017
+      name: mongodb
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        ports:
+          - containerPort: 5672
+          - containerPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-service
+  template:
+    metadata:
+      labels:
+        app: api-service
+    spec:
+      initContainers:
+      - name: wait-for-mongodb
+        image: mongo:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - echo "Waiting for MongoDB to be ready...";
+          until mongosh --host mongodb --port 27017 -u admin -p 123123123 --authenticationDatabase admin --eval "db.adminCommand('ping')";
+          do echo "MongoDB not ready yet... waiting 3s"; sleep 3; done;
+          echo "MongoDB is ready!"
+      containers:
+      - name: api-service
+        image: api-service:latest
+        imagePullPolicy: Never
+        command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+          - containerPort: 8000
+        env:
+          - name: MONGO_URI
+            value: "mongodb://admin:123123123@mongodb:27017/news_aggregator?authSource=admin"
+          - name: DB_NAME
+            value: news_aggregator
+          - name: ARTICLE_COLLECTION
+            value: articles
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+spec:
+  selector:
+    app: api-service
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+      nodePort: 30000
+  type: NodePort
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer-service
+  template:
+    metadata:
+      labels:
+        app: consumer-service
+    spec:
+      initContainers:
+      - name: wait-for-mongodb
+        image: mongo:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - echo "Waiting for MongoDB to be ready...";
+          until mongosh --host mongodb --port 27017 -u admin -p 123123123 --authenticationDatabase admin --eval "db.adminCommand('ping')";
+          do echo "MongoDB not ready yet... waiting 3s"; sleep 3; done;
+          echo "MongoDB is ready!"
+      - name: wait-for-rabbitmq
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - apk add --no-cache netcat-openbsd;
+          echo "Waiting for RabbitMQ to be ready...";
+          until nc -z -w3 rabbitmq 5672;
+          do echo "RabbitMQ not ready yet... waiting 3s"; sleep 3; done;
+          echo "RabbitMQ is ready!"
+      containers:
+      - name: consumer-service
+        image: consumer-service:latest
+        imagePullPolicy: Never
+        command: ["python", "-m", "app.consumer_runner"]
+        env:
+          - name: MONGO_URI
+            value: "mongodb://admin:123123123@mongodb:27017/news_aggregator?authSource=admin"
+          - name: DB_NAME
+            value: news_aggregator
+          - name: ARTICLE_COLLECTION
+            value: articles
+          - name: RABBITMQ_HOST
+            value: rabbitmq
+          - name: RABBITMQ_PORT
+            value: "5672"
+          - name: RABBITMQ_DEFAULT_USER
+            value: guest
+          - name: RABBITMQ_DEFAULT_PASS
+            value: guest
+          - name: RABBITMQ_QUEUE
+            value: rss_fetcher_queue
+          - name: SIMILARITY_THRESHOLD
+            value: "0.7"
+          - name: DEDUPLICATION_WINDOW_HOURS
+            value: "12"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fetcher-service-cronjob
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          initContainers:
+          - name: wait-for-rabbitmq
+            image: alpine:latest
+            command: ["/bin/sh", "-c"]
+            args:
+            - apk add --no-cache netcat-openbsd;
+              echo "Waiting for RabbitMQ to be ready...";
+              until nc -z -w3 rabbitmq 5672;
+              do echo "RabbitMQ not ready yet... waiting 3s"; sleep 3; done;
+              echo "RabbitMQ is ready!"
+          containers:
+          - name: fetcher-service
+            image: fetcher-service:latest
+            imagePullPolicy: Never
+            command: ["python", "-m", "app.main"]
+            env:
+              - name: RABBITMQ_HOST
+                value: rabbitmq
+              - name: RABBITMQ_PORT
+                value: "5672"
+              - name: RABBITMQ_DEFAULT_USER
+                value: guest
+              - name: RABBITMQ_DEFAULT_PASS
+                value: guest
+              - name: RABBITMQ_QUEUE
+                value: rss_fetcher_queue
+              - name: FETCH_INTERVAL_MINUTES
+                value: "5"
+              - name: RSS_FEEDS_STRING
+                value: "http://rss.cnn.com/rss/edition.rss,https://rss.nytimes.com/services/xml/rss/nyt/World.xml,https://www.theguardian.com/world/rss,https://feeds.npr.org/1001/rss.xml,https://www.cnbc.com/id/100003114/device/rss/rss.html,https://www.politico.com/rss/politicopicks.xml,http://feeds.foxnews.com/foxnews/latest"
+          restartPolicy: Never
+
