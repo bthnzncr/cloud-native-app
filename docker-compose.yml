@@ -119,6 +119,9 @@ services:
       retries: 3
       start_period: 10s
 
+  # Frontend service
+
+
 volumes:
   mongodb_data:
   rabbitmq_data:

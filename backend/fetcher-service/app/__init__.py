@@ -1,7 +1,18 @@
 """
-Fetcher Service Module
+RSS Fetcher Service Package
+----------------------------
 
-This package contains the RSS feed fetcher service components.
+A modular service for fetching and processing RSS feeds from various news sources.
 """
 
-# Empty __init__.py file to mark this directory as a Python package 
+__version__ = "1.0.0"
+
+# Make modules available for import
+from app.config import settings
+from app.http import HTTPClient
+from app.parsers import FeedParser, FeedItem
+from app.extractors import ImageExtractor
+from app.messaging import RabbitMQClient
+
+# Main functions
+from app.main import fetch_and_publish_all_feeds, main, app 

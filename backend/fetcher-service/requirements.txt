@@ -1,10 +1,11 @@
 uvicorn[standard]
-aio-pika
-httpx
-feedparser
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
+aio-pika==9.3.0
+httpx==0.25.0
+feedparser==6.0.10
+pydantic==2.4.2
+pydantic-settings==2.0.3
 schedule
 python-dotenv 
 scikit-learn
 beautifulsoup4
+gunicorn==21.2.0

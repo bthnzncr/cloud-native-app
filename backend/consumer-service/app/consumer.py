@@ -4,6 +4,7 @@ import logging
 import asyncio
 import signal  # For graceful shutdown
 import time
+import re  # For HTML tag removal
 from datetime import datetime, timedelta, timezone
 
 import dateutil.parser  # For parsing ISO dates robustly
@@ -28,6 +29,18 @@ shutdown_requested = False
 rabbitmq_connection = None
 rabbitmq_channel = None
 db_client = None
+
+# --- HTML Tag Removal ---
+def strip_html_tags(text):
+    """Remove HTML tags from text."""
+    if not text:
+        return text
+    # Remove HTML tags
+    clean_text = re.sub(r'<[^>]+>', '', text)
+    # Replace multiple spaces with a single space
+    clean_text = re.sub(r'\s+', ' ', clean_text)
+    # Trim leading/trailing spaces
+    return clean_text.strip()
 
 # --- Similarity Calculation ---
 def check_similarity(new_text: str, stored_texts: list) -> tuple:
@@ -125,7 +138,7 @@ async def check_and_save_article(article_data: dict):
         logger.error(f"Error during similarity check: {e}", exc_info=True)
         return False
 
-    # --- 3. Add ML Category and Save ---
+    # --- 3. Categorize and save article ---
     if not is_duplicate:
         try:
             # Skip articles with null title or description
@@ -133,21 +146,18 @@ async def check_and_save_article(article_data: dict):
                 logger.warning(f"Skipping article with null title or description: {link}")
                 return True
                 
-            # Save original category if present
-            if 'category' in article_data:
-                article_data['original_category'] = article_data['category']
+            # Apply ML categorization using our existing function
+            category = categorize_news_article(article_data)
+            article_data['category'] = category
             
-            # Always apply ML categorization
-            article_data['category'] = categorize_news_article(article_data)
-            
-            # Save to database
+            # Save to database with category
             result = await collection.update_one(
                 {'link': link},
                 {'$setOnInsert': article_data},
                 upsert=True
             )
             if result.upserted_id:
-                logger.info(f"Saved new article with category '{article_data.get('category')}': {link}")
+                logger.info(f"Saved new article with category '{category}': {link}")
             else:
                 logger.info(f"Article already exists (race condition): {link}")
             return True
@@ -179,20 +189,35 @@ def message_callback(ch, method, properties, body):
             logger.warning(f"Skipping message with null title or description: {link}")
             ch.basic_ack(delivery_tag=delivery_tag)
             return
+            
+        # Skip articles without picture
+        if not article_payload.get('picture'):
+            logger.warning(f"Skipping message without picture: {link}")
+            ch.basic_ack(delivery_tag=delivery_tag)
+            return
 
         # Parse dates
         try:
             parsed_data = article_payload.copy()
+            
+            # We'll use ML to categorize, so remove any existing category 
+            if 'category' in parsed_data:
+                del parsed_data['category']
+                
+            # Strip HTML tags from title and description
+            if parsed_data.get('title'):
+                parsed_data['title'] = strip_html_tags(parsed_data['title'])
+            if parsed_data.get('description'):
+                parsed_data['description'] = strip_html_tags(parsed_data['description'])
+            
+            # Parse dates
             parsed_data['published_date'] = dateutil.parser.isoparse(article_payload['published_date'])
             parsed_data['fetched_at'] = dateutil.parser.isoparse(article_payload['fetched_at'])
             parsed_data['published_date'] = parsed_data['published_date'].astimezone(timezone.utc)
             parsed_data['fetched_at'] = parsed_data['fetched_at'].astimezone(timezone.utc)
             
-            # Save original category if present
-            if 'category' in parsed_data:
-                parsed_data['original_category'] = parsed_data['category']
         except (ValueError, TypeError, KeyError) as e:
-            logger.error(f"Error parsing dates: {e}")
+            logger.error(f"Error parsing dates or checking fields: {e}")
             ch.basic_ack(delivery_tag=delivery_tag)
             return
 
@@ -243,7 +268,7 @@ def main():
     signal.signal(signal.SIGINT, request_shutdown)
     signal.signal(signal.SIGTERM, request_shutdown)
 
-    # Initialize ML model
+    # Initialize ML model (still needed for potential future use)
     logger.info("Initializing news categorizer model...")
     from .filtered_categorizer import filtered_categorizer
     

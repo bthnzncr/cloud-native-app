@@ -9,6 +9,7 @@ class Article(BaseModel):
     link: HttpUrl = Field(..., description="Direct link to the full article")
     published_date: Optional[datetime] = Field(None, description="Publication date of the article")
     category: Optional[str] = Field(None, description="Category or topic of the article")
+    source_category: Optional[str] = Field(None, description="Category defined in the fetcher configuration")
     picture: Optional[HttpUrl] = Field(None, description="URL of an image associated with the article")
 
     model_config = ConfigDict(
@@ -24,44 +25,3 @@ class Article(BaseModel):
             }
         }
     )
-
-class ArticleResponse(BaseModel):
-    """Model for article response."""
-    _id: str = Field(..., description="MongoDB ObjectId as string")
-    source: str = Field(..., description="Source of the article")
-    title: str = Field(..., description="Title of the article")
-    description: Optional[str] = Field(None, description="Description or summary of the article")
-    link: str = Field(..., description="Link to the original article")
-    published_date: datetime = Field(..., description="Publication date of the article")
-    category: Optional[str] = Field(None, description="Category of the article")
-    picture: Optional[str] = Field(None, description="URL to article image/thumbnail")
-    fetched_at: datetime = Field(..., description="When the article was fetched by the system")
-
-    model_config = ConfigDict(
-        extra="allow"
-    )
-
-class ErrorResponse(BaseModel):
-    """Model for error responses."""
-    detail: str
-
-class CategoryResponse(BaseModel):
-    """Model for category response."""
-    name: str
-    count: int
-
-class SourceResponse(BaseModel):
-    """Model for source response."""
-    name: str
-    count: int
-
-# If needed for future use:
-class ArticleCreate(BaseModel):
-    """Model for creating an article (if you add this functionality)."""
-    source: str
-    title: str
-    description: Optional[str] = None
-    link: str
-    published_date: datetime
-    category: Optional[str] = None
-    picture: Optional[str] = None 
