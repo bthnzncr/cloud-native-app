@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+@layer components {
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .news-card {
+    @apply bg-white rounded-md shadow-md overflow-hidden transition-transform duration-300 hover:shadow-lg hover:-translate-y-1;
+    aspect-ratio: 1 / 1;
+  }
+} 
