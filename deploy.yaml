@@ -101,9 +101,6 @@ spec:
                   key: ARTICLE_COLLECTION
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
-            limits:
               cpu: "500m"
               memory: "1Gi"
 ---
@@ -118,8 +115,7 @@ spec:
     - protocol: TCP
       port: 8000
       targetPort: 8000
-      nodePort: 30000
-  type: NodePort
+  type: LoadBalancer
 
 # === CONSUMER SERVICE ===
 ---
@@ -229,11 +225,8 @@ spec:
               value: "http://api-service:8000"
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "200m"
-              memory: "512Mi"
+              cpu: "500m"
+              memory: "1Gi"
 ---
 apiVersion: v1
 kind: Service
@@ -246,5 +239,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-      nodePort: 30080
-  type: NodePort
+  type: LoadBalancer

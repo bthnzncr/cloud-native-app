@@ -27,7 +27,7 @@ cd ../..
 echo "📦 Building frontend..."
 cd frontend
 docker build -t frontend:latest \
-  --build-arg VITE_API_URL=http://api-service:8000 .
+  --build-arg VITE_API_URL=http://35.189.84.171:8000/ .
 cd ..
 
 # Pull and tag rabbitmq

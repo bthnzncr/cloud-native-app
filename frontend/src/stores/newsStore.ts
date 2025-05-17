@@ -16,7 +16,7 @@ export interface NewsItem {
 
 export const useNewsStore = defineStore('news', {
   state: () => ({
-    newsItems: generateMockNews(), // Initialize with mock data by default
+    newsItems: [] as NewsItem[], // Initialize with mock data by default
     loading: false,
     loadingMore: false, // Separate loading state for infinite scrolling
     error: null as string | null,
@@ -44,32 +44,16 @@ export const useNewsStore = defineStore('news', {
       console.log(`Fetching news: page ${this.currentPage}, limit ${this.limit}`);
       
       try {
-        // Use environment variable for the API URL
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:30000';
+        // Use the new api.getAllNews method
+        const result = await api.getAllNews(this.currentPage, this.limit);
         
-        // Build the API endpoint with query parameters
-        let endpoint = `/api/articles?page=${this.currentPage}&limit=${this.limit}`;
+        console.log(`API response:`, result);
         
-        // Fetch news from the API
-        const response = await axios.get(`${apiUrl}${endpoint}`);
-        
-        console.log(`API response:`, response.data);
-        
-        // Map API response to our NewsItem format
-        const newItems = response.data.articles.map((article: any) => ({
-          id: article._id,
-          title: article.title,
-          description: article.description,
-          publishedAt: article.published_date,
-          source: article.source,
-          category: article.category,
-          imageUrl: article.picture,
-          link: article.link,
-          provider: article.provider || article.source // Use provider or fallback to source
-        }));
+        // New items are already mapped in api.ts
+        const newItems = result.articles;
         
         // Update total and pagination info
-        this.totalItems = response.data.total || 0;
+        this.totalItems = result.total || 0;
         
         // Append items if loading more, otherwise replace
         if (reset) {
@@ -87,11 +71,6 @@ export const useNewsStore = defineStore('news', {
       } catch (error) {
         console.error('Error fetching news:', error);
         this.error = 'Failed to load news items';
-        
-        if (reset) {
-          // Only load mock data if this is the initial fetch
-          this.newsItems = generateMockNews();
-        }
       } finally {
         this.loading = false;
       }
@@ -138,13 +117,6 @@ export const useNewsStore = defineStore('news', {
       } catch (error) {
         console.error(`Error fetching ${category} news:`, error);
         this.error = `Failed to load ${category} news items`;
-        
-        if (reset) {
-          // Only load mock data if this is the initial fetch
-          this.newsItems = generateMockNews().filter(item => 
-            item.category?.toUpperCase() === category.toUpperCase()
-          );
-        }
       } finally {
         // Clear the appropriate loading state
         if (reset) {
@@ -186,30 +158,14 @@ export const useNewsStore = defineStore('news', {
             // Check if we've reached the end
             this.hasMore = this.newsItems.length < this.totalItems;
           } else {
-            // Use environment variable for the API URL
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:30000';
+            // Use the new api.getAllNews method
+            const result = await api.getAllNews(this.currentPage, this.limit);
             
-            // Build the API endpoint with query parameters
-            let endpoint = `/api/articles?page=${this.currentPage}&limit=${this.limit}`;
-            
-            // Fetch news from the API
-            const response = await axios.get(`${apiUrl}${endpoint}`);
-            
-            // Map API response to our NewsItem format
-            const newItems = response.data.articles.map((article: any) => ({
-              id: article._id,
-              title: article.title,
-              description: article.description,
-              publishedAt: article.published_date,
-              source: article.source,
-              category: article.category,
-              imageUrl: article.picture,
-              link: article.link,
-              provider: article.provider || article.source
-            }));
+            // New items are already mapped in api.ts
+            const newItems = result.articles;
             
             // Update total and pagination info
-            this.totalItems = response.data.total || 0;
+            this.totalItems = result.total || 0;
             
             // Append new items
             this.newsItems = [...this.newsItems, ...newItems];
@@ -287,14 +243,7 @@ export const useNewsStore = defineStore('news', {
       } catch (error) {
         console.error(`Error searching news for "${query}":`, error);
         this.error = `Failed to search for "${query}"`;
-        
-        if (reset) {
-          // Filter mock data for search results as a fallback
-          this.newsItems = generateMockNews().filter(item => 
-            item.title.toLowerCase().includes(query.toLowerCase()) || 
-            (item.description?.toLowerCase().includes(query.toLowerCase()) || false)
-          );
-        }
+
       } finally {
         // Clear the appropriate loading state
         if (reset) {
@@ -306,28 +255,3 @@ export const useNewsStore = defineStore('news', {
     }
   }
 })
-
-// Mock data for development
-function generateMockNews(): NewsItem[] {
-  const sources = ['BBC News', 'CNN', 'Reuters', 'The Guardian', 'Al Jazeera']
-  const providers = ['BBC News', 'CNN', 'Reuters', 'The Guardian', 'Al Jazeera']
-  const categories = ['TECHNOLOGY', 'BUSINESS', 'POLITICS', 'SCIENCE', 'ENTERTAINMENT', 'HEALTH', 'SPORTS', 'WORLD']
-  
-  // Generate mock news with random categories
-  return Array.from({ length: 12 }, (_, i) => {
-    const randomProvider = providers[Math.floor(Math.random() * providers.length)]
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)]
-    
-    return {
-      id: `news-${i}`,
-      title: `${randomCategory}: News headline ${i + 1} about current events`,
-      description: `This is a sample description for news item ${i + 1}. It contains a brief overview of what the article is about.`,
-      publishedAt: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 5)).toISOString(),
-      source: sources[Math.floor(Math.random() * sources.length)],
-      imageUrl: `https://picsum.photos/500/500?random=${i}`,
-      link: `https://example.com/news/${i}`,
-      category: randomCategory,
-      provider: randomProvider
-    }
-  })
-} 

@@ -51,12 +51,7 @@ class Settings(BaseSettings):
        
             # Washington Post feeds
             FeedInfo("http://feeds.washingtonpost.com/rss/world", "Washington Post"),
-            
-            # Bloomberg News feed
-            FeedInfo("https://www.bloomberg.com/feeds/sitemap_news.xml", "Bloomberg"),
-            
-            # Sky News feeds
-            FeedInfo("https://feeds.skynews.com/feeds/rss/world.xml", "Sky News"),
+                        
             
             # Financial Times feed
             FeedInfo("https://www.ft.com/world?format=rss", "Financial Times"),

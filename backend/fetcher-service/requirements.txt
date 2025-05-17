@@ -3,6 +3,8 @@ httpx==0.25.0
 feedparser==6.0.10
 pydantic==2.4.2
 pydantic-settings==2.0.3
-beautifulsoup4
+beautifulsoup4==4.12.2
 Flask==2.3.3
-functions-framework==3.*
+gunicorn==21.2.0
+python-dotenv==1.0.0
+functions-framework==3.8.0

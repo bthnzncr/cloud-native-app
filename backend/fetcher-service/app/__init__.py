@@ -15,4 +15,3 @@ from app.extractors import ImageExtractor
 from app.messaging import RabbitMQClient
 
 # Main functions
-from app.main import fetch_and_publish_all_feeds, main, app 
