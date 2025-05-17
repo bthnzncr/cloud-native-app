@@ -16,14 +16,10 @@ class Settings(BaseSettings):
     RABBITMQ_DEFAULT_PASS: str
     RABBITMQ_QUEUE: str
 
-    # Application settings
-    FETCH_INTERVAL_MINUTES: int
-    
-    
-    @property
-    def RSS_FEEDS(self) -> List[str]:
-        """Parse the RSS feeds from the environment string (legacy support)."""
-        return [feed.strip() for feed in self.RSS_FEEDS_STRING.split(",") if feed.strip()]
+    # Application Info (for health check)
+    VERSION: Optional[str] = "0.1.0"
+    ENVIRONMENT: Optional[str] = "development"
+
     
     @property
     def FEED_CONFIGURATIONS(self) -> List[FeedInfo]:
