@@ -19,8 +19,8 @@ cd ../..
 
 # Build consumer-service image
 echo "📦 Building consumer-service..."
-cd backend/consumer-service
-docker build -t consumer-service:latest .
+cd backend/deduplicator-classifier-service
+docker build -t deduplicator-classifier-service:latest .
 cd ../..
 
 # Build frontend image with proper VITE_API_URL
@@ -41,8 +41,8 @@ echo "🚀 Tagging and pushing to Artifact Registry..."
 docker tag api-service:latest ${REPO_URL}/api-service:latest
 docker push ${REPO_URL}/api-service:latest
 
-docker tag consumer-service:latest ${REPO_URL}/consumer-service:latest
-docker push ${REPO_URL}/consumer-service:latest
+docker tag deduplicator-classifier-service:latest ${REPO_URL}/deduplicator-classifier-service:latest
+docker push ${REPO_URL}/deduplicator-classifier-service:latest
 
 docker tag frontend:latest ${REPO_URL}/frontend:latest
 docker push ${REPO_URL}/frontend:latest

@@ -19,8 +19,8 @@ spec:
         - name: rabbitmq
           image: europe-west2-docker.pkg.dev/tactical-helix-459822-k5/my-repo/rabbitmq:latest
           ports:
-            - containerPort: 5672  # AMQP
-            - containerPort: 15672 # Management UI
+            - containerPort: 5672
+            - containerPort: 15672
           env:
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
@@ -59,8 +59,9 @@ spec:
       port: 15672
       targetPort: 15672
 
-# === API SERVICE ===
 ---
+
+# === API SERVICE Deployment ===
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -101,9 +102,15 @@ spec:
                   key: ARTICLE_COLLECTION
           resources:
             requests:
+              cpu: "256m"
+              memory: "512Mi"
+            limits:
               cpu: "500m"
               memory: "1Gi"
+
 ---
+
+# === API SERVICE LoadBalancer Service ===
 apiVersion: v1
 kind: Service
 metadata:
@@ -117,27 +124,28 @@ spec:
       targetPort: 8000
   type: LoadBalancer
 
-# === CONSUMER SERVICE ===
 ---
+
+# === CONSUMER SERVICE ===
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: consumer-service
+  name: deduplicator-classifier-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: consumer-service
+      app: deduplicator-classifier-service
   template:
     metadata:
       labels:
-        app: consumer-service
+        app: deduplicator-classifier-service
     spec:
       imagePullSecrets:
         - name: gcr-json-key
       containers:
-        - name: consumer-service
-          image: europe-west2-docker.pkg.dev/tactical-helix-459822-k5/my-repo/consumer-service:latest
+        - name: deduplicator-classifier-service
+          image: europe-west2-docker.pkg.dev/tactical-helix-459822-k5/my-repo/deduplicator-classifier-service:latest
           env:
             - name: MONGO_URI
               valueFrom:
@@ -191,14 +199,15 @@ spec:
                   key: DEDUPLICATION_WINDOW_HOURS
           resources:
             requests:
-              cpu: "1000m"
+              cpu: "512m"
               memory: "2Gi"
             limits:
-              cpu: "1000m"
-              memory: "2Gi"
+              cpu: "1500m"
+              memory: "3Gi"
+
+---
 
 # === FRONTEND ===
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -225,9 +234,15 @@ spec:
               value: "http://api-service:8000"
           resources:
             requests:
-              cpu: "500m"
-              memory: "1Gi"
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+
 ---
+
+# === FRONTEND LoadBalancer Service ===
 apiVersion: v1
 kind: Service
 metadata:
