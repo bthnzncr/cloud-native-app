@@ -7,6 +7,12 @@ REGION=europe-west2
 REPO_NAME=my-repo
 REPO_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}"
 
+gcloud artifacts repositories describe $REPO_NAME --location=$REGION || \
+gcloud artifacts repositories create $REPO_NAME \
+  --repository-format=docker \
+  --location=$REGION \
+  --description="Docker repo for app images"
+  
 echo "📁 Using GCP Project: $PROJECT_ID"
 echo "📦 Target Artifact Registry: $REPO_URL"
 echo "🔨 Building Docker images..."
@@ -26,7 +32,7 @@ cd ../..
 # Build frontend image with proper VITE_API_URL
 echo "📦 Building frontend..."
 cd frontend
-docker build -t frontend:latest --build-arg VITE_API_URL=http://34.89.9.123:8000 .
+docker build -t frontend:latest --build-arg VITE_API_URL=http://34.89.9.123:8000 . #IMPORTANT, NEEDS REDEPLOYMENT
 cd ..
 
 # Pull and tag rabbitmq
