@@ -34,11 +34,11 @@ spec:
                   key: RABBITMQ_PASS
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "200m"
+              cpu: "256m"
               memory: "512Mi"
+            limits:
+              cpu: "280m"
+              memory: "600Mi"
 
 ---
 
@@ -67,7 +67,7 @@ kind: Deployment
 metadata:
   name: api-service
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: api-service
@@ -102,11 +102,11 @@ spec:
                   key: ARTICLE_COLLECTION
           resources:
             requests:
+              cpu: "128m"
+              memory: "300Mi"
+            limits:
               cpu: "256m"
               memory: "512Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
 
 ---
 
@@ -199,21 +199,21 @@ spec:
                   key: DEDUPLICATION_WINDOW_HOURS
           resources:
             requests:
-              cpu: "512m"
-              memory: "2Gi"
+              cpu: "256m"
+              memory: "600Mi"
             limits:
-              cpu: "1500m"
-              memory: "3Gi"
+              cpu: "280m"
+              memory: "700Mi"
 
 ---
 
-# === FRONTEND ===
+# === FRONTEND Deployment ===
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: frontend
@@ -232,13 +232,26 @@ spec:
           env:
             - name: VUE_APP_API_URL
               value: "http://api-service:8000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "128m"
+              memory: "300Mi"
             limits:
-              cpu: "200m"
-              memory: "256Mi"
+              cpu: "256m"
+              memory: "512Mi"
 
 ---
 
