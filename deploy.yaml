@@ -35,10 +35,10 @@ spec:
           resources:
             requests:
               cpu: "256m"
-              memory: "512Mi"
+              memory: "400Mi"
             limits:
-              cpu: "280m"
-              memory: "600Mi"
+              cpu: "300m"
+              memory: "700Mi"
 
 ---
 
@@ -67,7 +67,7 @@ kind: Deployment
 metadata:
   name: api-service
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: api-service
@@ -102,11 +102,11 @@ spec:
                   key: ARTICLE_COLLECTION
           resources:
             requests:
-              cpu: "128m"
-              memory: "300Mi"
-            limits:
               cpu: "256m"
-              memory: "512Mi"
+              memory: "256Mi"
+            limits:
+              cpu: "300m"
+              memory: "400Mi"
 
 ---
 
@@ -199,11 +199,11 @@ spec:
                   key: DEDUPLICATION_WINDOW_HOURS
           resources:
             requests:
-              cpu: "256m"
-              memory: "600Mi"
+              cpu: "200m"
+              memory: "256Mi"
             limits:
-              cpu: "280m"
-              memory: "700Mi"
+              cpu: "300m"
+              memory: "400Mi"
 
 ---
 
@@ -213,7 +213,7 @@ kind: Deployment
 metadata:
   name: frontend
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: frontend
@@ -247,11 +247,11 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              cpu: "128m"
-              memory: "300Mi"
-            limits:
               cpu: "256m"
-              memory: "512Mi"
+              memory: "200Mi"
+            limits:
+              cpu: "300m"
+              memory: "300Mi"
 
 ---
 

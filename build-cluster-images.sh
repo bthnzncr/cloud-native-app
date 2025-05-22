@@ -26,8 +26,7 @@ cd ../..
 # Build frontend image with proper VITE_API_URL
 echo "📦 Building frontend..."
 cd frontend
-docker build -t frontend:latest \
-  --build-arg VITE_API_URL=http://34.105.177.78:8000 .
+docker build -t frontend:latest --build-arg VITE_API_URL=http://34.89.9.123:8000 .
 cd ..
 
 # Pull and tag rabbitmq

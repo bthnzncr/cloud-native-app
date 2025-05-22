@@ -64,8 +64,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: api-service
-  minReplicas: 2
-  maxReplicas: 10
+  minReplicas: 3
+  maxReplicas: 30
   metrics:
     - type: Resource
       resource:
@@ -92,18 +92,18 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: frontend
-  minReplicas: 2
-  maxReplicas: 10
+  minReplicas: 3
+  maxReplicas: 30
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 55
+          averageUtilization: 20
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: 55
+          averageUtilization: 20
